@@ -50,6 +50,7 @@ const App = () => {
         {/* !authUser? ถ้ายังไม่มี user ให้ไปหน้า login : ถ้ามี user แล้ว ให้ไปหน้า / ส่วนของ / คือหน้าแรก*/}
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
         <Route path="/settings" element={<SettingsPage />} />
+        {/* ถ้ามี authUser (Login แล้ว) ให้ไปหน้า ProfilePage : ถ้าไม่มี (ไม่มี token) ให้เด้งกลับไปหน้า Login */}
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
       </Routes>
 
