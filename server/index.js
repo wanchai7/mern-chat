@@ -26,7 +26,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api/v1/user/", userRouter);
+app.use("/api/v1/", userRouter);
 //connect to DB
 if (!MONGODB) {
   console.log("No MONGODB URL found in .env");
@@ -43,3 +43,5 @@ if (!MONGODB) {
 app.listen(PORT, () => {
   console.log("Server on http://localhost:" + PORT);
 });
+
+

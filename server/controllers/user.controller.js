@@ -6,7 +6,8 @@ dotenv.config();
 const secret = process.env.SECRET;
 const node_mode = process.env.node_mode;
 const cloudinary = require("../configs/cloudinary");
-const signUp = async (req, res) => {
+
+const register = async (req, res) => {
   const { fullName, email, password } = req.body;
   if (!fullName || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
@@ -194,7 +195,7 @@ const checkAuth = (req, res) => {
 };
 
 const userController = {
-  signUp,
+  register,
   login,
   logOut,
   updateProfile,

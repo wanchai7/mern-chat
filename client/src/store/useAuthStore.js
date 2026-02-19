@@ -7,7 +7,7 @@ const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
-    isSigningUp: false,
+    isRegistering: false,
     isLoggingIn: false,
     isUpdatingProfile: false,
     isCheckingAuth: true,
@@ -27,17 +27,17 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
-    signup: async (data) => {
-        set({ isSigningUp: true });
+    register: async (data) => {
+        set({ isRegistering: true });
         try {
-            const res = await axiosInstance.post("/signup", data);
+            const res = await axiosInstance.post("/register", data);
             set({ authUser: res.data });
             toast.success("Account created successfully");
             get().connectSocket();
         } catch (error) {
             toast.error(error.response.data.message);
         } finally {
-            set({ isSigningUp: false });
+            set({ isRegistering: false });
         }
     },
 
