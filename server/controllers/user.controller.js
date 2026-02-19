@@ -49,6 +49,7 @@ const register = async (req, res) => {
         fullName: newUser.fullName,
         email: newUser.email,
         profilePic: newUser.profilePic,
+        token: token,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
@@ -86,7 +87,7 @@ const login = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, //MS
       httpOnly: true, //XSS Attacks
       sameSite: "strict", //CSRF attacks,
-      secure: node_mode !== "development",
+      secure: node_mode === "production",
     });
 
     console.log("Token generated ans cookie set");
@@ -96,6 +97,7 @@ const login = async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic,
+      token: token,
     });
   } catch (error) {
     console.log(error);

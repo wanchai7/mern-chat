@@ -27,7 +27,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api/v1/", userRouter);
+app.use("/api/v1/user", userRouter);
 app.use("/api/v1/messages", messageRouter);
 //connect to DB
 if (!MONGODB) {
