@@ -13,13 +13,19 @@ const SignUpPage = () => {
         password: "",
     });
 
-    const { signup, isSigningUp } = useAuthStore();
+    const { register, isRegistering } = useAuthStore();
 
+    // ตรวจสอบข้อมูล
     const validateForm = () => {
+        // ตรวจสอบว่าข้อมูลไม่ว่าง
         if (!formData.fullName.trim()) return toast.error("Full name is required");
+        // ตรวจสอบว่า email ข้อมูลไม่ว่าง ส่วน trim() คือการลบช่องว่างหัวท้าย
         if (!formData.email.trim()) return toast.error("Email is required");
+        // !/ / คือเช็คว่าไม่เป็นไปตามรูปแบบ \s ต้องมี String + @ คือต้องมี @ ตามด้วย \s ต้องมี String + \. คือต้องมี . และหลังจุดต้องมี \s ต้องมี String
         if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
+        // ตรวจสอบว่าข้อมูลไม่ว่าง
         if (!formData.password) return toast.error("Password is required");
+        // ตรวจสอบว่าข้อมูลไม่ว่าง
         if (formData.password.length < 4) return toast.error("Password must be at least 4 characters");
 
         return true;
@@ -30,7 +36,7 @@ const SignUpPage = () => {
 
         const success = validateForm();
 
-        if (success === true) signup(formData);
+        if (success === true) register(formData);
     };
 
     return (
@@ -118,8 +124,8 @@ const SignUpPage = () => {
                             </div>
                         </div>
 
-                        <button type="submit" className="btn btn-primary w-full" disabled={isSigningUp}>
-                            {isSigningUp ? (
+                        <button type="submit" className="btn btn-primary w-full" disabled={isRegistering}>
+                            {isRegistering ? (
                                 <>
                                     <Loader2 className="size-5 animate-spin" />
                                     Loading...

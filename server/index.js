@@ -4,9 +4,10 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const userRouter = require("./routers/user.router");
+const messageRouter = require("./routers/message.route");
 dotenv.config();
 
-const app = express();
+const { app, server } = require("./lib/socket.js");
 const PORT = process.env.PORT;
 const BASE_URL = process.env.BASE_URL;
 const MONGODB = process.env.MONGODB;
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1/", userRouter);
+app.use("/api/v1/messages", messageRouter);
 //connect to DB
 if (!MONGODB) {
   console.log("No MONGODB URL found in .env");
@@ -40,7 +42,7 @@ if (!MONGODB) {
       console.log("Mongo DB connection error:", error);
     });
 }
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log("Server on http://localhost:" + PORT);
 });
 
