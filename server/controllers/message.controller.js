@@ -1,7 +1,7 @@
 const Message = require("../models/message.model");
 const User = require("../models/user.model");
 const cloudinary = require("../configs/cloudinary.js");
-// const { getReceiverSocketId, io } = require("../lib/socket.js"); // Assuming socket logic exists, if not, I'll mock or omit for now. Wait, I should import this if it exists.
+const { getReceiverSocketId, io } = require("../lib/socket.js");
 
 exports.getUsersForSidebar = async (req, res) => {
     try {
@@ -56,13 +56,11 @@ exports.sendMessage = async (req, res) => {
 
         await newMessage.save();
 
-        // todo: realtime functionality goes here => socket.io
-        /*
+        // realtime functionality => socket.io
         const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
-          io.to(receiverSocketId).emit("newMessage", newMessage);
+            io.to(receiverSocketId).emit("newMessage", newMessage);
         }
-        */
 
         res.status(201).json(newMessage);
     } catch (error) {

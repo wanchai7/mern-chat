@@ -83,10 +83,13 @@ export const useAuthStore = create(
         },
 
         connectSocket: () => {
+            // สร้างเพื่อจะเก็บข้อมูล socket id ของ user
             const { authUser } = get();
+            // ดึงค่า authUser กับ socket ที่เชื่อมต่ออยู่ โดย การ get() คือการดึงค่าจาก store
             if (!authUser || get().socket?.connected) return;
 
             const socket = io(BASE_URL, {
+                // การส่ง query คือการส่งข้อมูลร้องขอ โดยมี key คือ userId และ value คือ authUser._id
                 query: {
                     userId: authUser._id,
                 },
@@ -94,7 +97,7 @@ export const useAuthStore = create(
             socket.connect();
 
             set({ socket: socket });
-
+            // socket.on("getOnlineUsers", (userIds) โดย  userId จะมีมาเยอะจึงใส่ ...userIds 
             socket.on("getOnlineUsers", (userIds) => {
                 set({ onlineUsers: userIds });
             });
