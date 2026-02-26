@@ -6,6 +6,7 @@ const { getReceiverSocketId, io } = require("../lib/socket.js");
 exports.getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
+        // $ne ดึงรายชื่อ user ทั้งหมด ยกเว้นตัวเอง และไม่ส่ง password กลับมา —password ใช้สำหรับแสดง sidebar รายชื่อคนที่แชทด้วย
         const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
         res.status(200).json(filteredUsers);

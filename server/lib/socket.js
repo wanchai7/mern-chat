@@ -13,30 +13,30 @@ const io = new Server(server, {
   },
 });
 
-const userSocketMap = []; // {userId: socketId}
+const userSocketMap = {}; // {userId: socketId}
 
 // return socketId
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId; // socket.handshake คือการส่งคำร้องขอ query คือการส่งข้อมูลร้องข้อ
-  console.log("A user connected", socket.id)
+  console.log("ฉันกำลังอนนไลน์อยู่", socket.id)
 
   if (userId) userSocketMap[userId] = socket.id;
 
   console.log("UserSocketMap", userSocketMap)
 
-    // emits the online users to the client
-    // userCoketMap คือส่งออกไปหรือ reture user ที่ออนไลอยู่บ้าง  
+  // emits the online users to the client
+  // userCoketMap คือส่งออกไปหรือ reture user ที่ออนไลอยู่บ้าง  
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // can be used to listen to the events from the client
   socket.on("disconnect", () => {
-    
+
     console.log("A user disconnected", socket.id)
 
     if (userId) delete userSocketMap[userId];
 
-      console.log("UserSocketMap", userSocketMap);
+    console.log("UserSocketMap", userSocketMap);
 
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
