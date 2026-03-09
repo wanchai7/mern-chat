@@ -10,6 +10,7 @@ const Sidebar = () => {
     const { onlineUsers } = useAuthStore();
     const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
+    // รูปแบบของ useEffect useEffect( () => {}, []);
     useEffect(() => {
         getUsers();
     }, [getUsers]);
