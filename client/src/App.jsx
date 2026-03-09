@@ -33,7 +33,7 @@ const App = () => {
   if (isCheckingAuth && !authUser)
     return (
       // h-screen คือการทำให้ Loader แสดงเต็มหน้าจอ
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-dvh">
         {/* size คือขนาดของ animate-spin คือการทำให้ Loader หมุน */}
         <Loader className="size-10 animate-spin" />
       </div>
