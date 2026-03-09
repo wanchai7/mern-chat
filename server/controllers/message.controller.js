@@ -9,7 +9,37 @@ exports.getUsersForSidebar = async (req, res) => {
         // $ne ดึงรายชื่อ user ทั้งหมด ยกเว้นตัวเอง และไม่ส่ง password กลับมา —password ใช้สำหรับแสดง sidebar รายชื่อคนที่แชทด้วย
         const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
-        res.status(200).json(filteredUsers);
+        const usersWithDetails = await Promise.all(
+            filteredUsers.map(async (user) => {
+                const latestMessage = await Message.findOne({
+                    $or: [
+                        { senderId: loggedInUserId, receiverId: user._id },
+                        { senderId: user._id, receiverId: loggedInUserId },
+                    ],
+                }).sort({ createdAt: -1 });
+
+                const unreadCount = await Message.countDocuments({
+                    senderId: user._id,
+                    receiverId: loggedInUserId,
+                    isRead: false,
+                });
+
+                return {
+                    ...user._doc,
+                    latestMessage,
+                    unreadCount,
+                };
+            })
+        );
+
+        // Sort users by latest message (descending)
+        usersWithDetails.sort((a, b) => {
+            const timeA = a.latestMessage ? new Date(a.latestMessage.createdAt).getTime() : 0;
+            const timeB = b.latestMessage ? new Date(b.latestMessage.createdAt).getTime() : 0;
+            return timeB - timeA;
+        });
+
+        res.status(200).json(usersWithDetails);
     } catch (error) {
         console.error("Error in getUsersForSidebar: ", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -66,6 +96,28 @@ exports.sendMessage = async (req, res) => {
         res.status(201).json(newMessage);
     } catch (error) {
         console.error("Error in sendMessage: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.markMessagesAsRead = async (req, res) => {
+    try {
+        const { id: senderId } = req.params;
+        const myId = req.user._id;
+
+        await Message.updateMany(
+            { senderId: senderId, receiverId: myId, isRead: false },
+            { $set: { isRead: true } }
+        );
+
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("messagesRead", { readerId: myId });
+        }
+
+        res.status(200).json({ message: "Messages marked as read" });
+    } catch (error) {
+        console.error("Error in markMessagesAsRead: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

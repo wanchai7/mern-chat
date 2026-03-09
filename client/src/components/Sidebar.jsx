@@ -3,9 +3,10 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users } from "lucide-react";
+import { formatMessageTime } from "../lib/utils";
 
 const Sidebar = () => {
-    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+    const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, subscribeToSidebarMessages, unsubscribeFromSidebarMessages } = useChatStore();
 
     const { onlineUsers } = useAuthStore();
     const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -13,7 +14,12 @@ const Sidebar = () => {
     // รูปแบบของ useEffect useEffect( () => {}, []);
     useEffect(() => {
         getUsers();
-    }, [getUsers]);
+        subscribeToSidebarMessages();
+
+        return () => {
+            unsubscribeFromSidebarMessages();
+        }
+    }, [getUsers, subscribeToSidebarMessages, unsubscribeFromSidebarMessages]);
 
     const filteredUsers = showOnlineOnly
         ? users.filter((user) => onlineUsers.includes(user._id))
@@ -69,10 +75,24 @@ const Sidebar = () => {
                         </div>
 
                         {/* User info - only visible on larger screens */}
-                        <div className="text-left min-w-0">
-                            <div className="font-medium truncate">{user.fullName}</div>
-                            <div className="text-sm text-zinc-400">
-                                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                        <div className="text-left w-full min-w-0 pr-1">
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="font-medium truncate">{user.fullName}</div>
+                                {user.latestMessage && (
+                                    <span className="text-xs text-zinc-500 ml-2 whitespace-nowrap">
+                                        {formatMessageTime(user.latestMessage.createdAt)}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-zinc-400 truncate pr-2">
+                                    {user.latestMessage?.text || (user.latestMessage?.image ? "Sent an image" : (onlineUsers.includes(user._id) ? "Online" : "Offline"))}
+                                </div>
+                                {user.unreadCount > 0 && (
+                                    <div className="badge badge-primary badge-sm shrink-0 scale-90">
+                                        {user.unreadCount}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </button>

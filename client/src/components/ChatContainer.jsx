@@ -73,6 +73,11 @@ const ChatContainer = () => {
                             )}
                             {message.text && <p>{message.text}</p>}
                         </div>
+                        {message.senderId === authUser._id && message.isRead && (
+                            <div className="chat-footer opacity-50 text-xs flex gap-1 items-center mt-1">
+                                อ่านแล้ว
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

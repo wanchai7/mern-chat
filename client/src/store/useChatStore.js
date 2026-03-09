@@ -12,6 +12,56 @@ export const useChatStore = create(
         isUsersLoading: false,
         isMessagesLoading: false,
 
+        subscribeToSidebarMessages: () => {
+            const socket = useAuthStore.getState().socket;
+            if (!socket) return;
+            
+            // To ensure we don't have multiple handlers if called multiple times, off it first
+            socket.off("newMessageFromSidebar");
+            // use a specific handler so it doesn't conflict with ChatContainer's newMessage listener
+            const sidebarHandler = (newMessage) => {
+                const state = get();
+                const isFromSelectedUser = state.selectedUser && newMessage.senderId === state.selectedUser._id;
+                
+                set((prev) => {
+                    const updatedUsers = prev.users.map((u) => {
+                        // Match either if they are the sender, or if we sent a message to them (if backend sent back our own message via socket)
+                        const isRelatedUser = u._id === newMessage.senderId || u._id === newMessage.receiverId;
+                        if (!isRelatedUser) return u;
+
+                        return {
+                            ...u,
+                            latestMessage: newMessage,
+                            unreadCount: (u._id === newMessage.senderId && !isFromSelectedUser) 
+                                            ? (u.unreadCount || 0) + 1 
+                                            : u.unreadCount,
+                        };
+                    });
+
+                    // Sort updated array based on latest message
+                    updatedUsers.sort((a,b) => {
+                        const timeA = a.latestMessage ? new Date(a.latestMessage.createdAt).getTime() : 0;
+                        const timeB = b.latestMessage ? new Date(b.latestMessage.createdAt).getTime() : 0;
+                        return timeB - timeA;
+                    });
+
+                    return { users: updatedUsers };
+                });
+            };
+
+            socket.on("newMessage", sidebarHandler);
+            // Save the ref to be able to off it specifically if needed, although simple enough to keep alive.
+            get().sidebarHandlerRef = sidebarHandler;
+        },
+
+        unsubscribeFromSidebarMessages: () => {
+            const socket = useAuthStore.getState().socket;
+            const handler = get().sidebarHandlerRef;
+            if (socket && handler) {
+                socket.off("newMessage", handler);
+            }
+        },
+
         getUsers: async () => {
             set({ isUsersLoading: true });
             try {
@@ -47,6 +97,22 @@ export const useChatStore = create(
                 set({ isMessagesLoading: false });
             }
         },
+        markMessagesAsRead: async (senderId) => {
+            try {
+                await axiosInstance.put(`/messages/mark-read/${senderId}`);
+                set((state) => ({
+                    messages: state.messages.map((msg) =>
+                        msg.senderId === senderId && !msg.isRead ? { ...msg, isRead: true } : msg
+                    ),
+                    users: state.users.map((user) =>
+                        user._id === senderId ? { ...user, unreadCount: 0 } : user
+                    )
+                }));
+            } catch (error) {
+                console.error("Failed to mark messages as read:", error);
+            }
+        },
+
         sendMessage: async (messageData) => {
             const { selectedUser, messages } = get();
             try {
@@ -73,9 +139,18 @@ export const useChatStore = create(
                 }
 
                 const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-                set({ messages: [...messages, res.data] });
+                set((state) => ({ 
+                    messages: [...state.messages, res.data],
+                    users: state.users.map(u => 
+                        u._id === selectedUser._id ? { ...u, latestMessage: res.data } : u
+                    ).sort((a,b) => {
+                        const timeA = a.latestMessage ? new Date(a.latestMessage.createdAt).getTime() : 0;
+                        const timeB = b.latestMessage ? new Date(b.latestMessage.createdAt).getTime() : 0;
+                        return timeB - timeA;
+                    })
+                }));
             } catch (error) {
-                toast.error(error.response.data.message || "Failed to send message");
+                toast.error(error.response?.data?.message || "Failed to send message");
             }
         },
 
@@ -92,13 +167,29 @@ export const useChatStore = create(
                 set({
                     messages: [...get().messages, newMessage],
                 });
+                get().markMessagesAsRead(selectedUser._id);
+            });
+
+            socket.on("messagesRead", ({ readerId }) => {
+                const { selectedUser } = get();
+                if (selectedUser && selectedUser._id === readerId) {
+                    set((state) => ({
+                        messages: state.messages.map(msg => ({ ...msg, isRead: true }))
+                    }));
+                }
             });
         },
 
         unsubscribeFromMessages: () => {
             const socket = useAuthStore.getState().socket;
             socket.off("newMessage");
+            socket.off("messagesRead");
         },
 
-        setSelectedUser: (selectedUser) => set({ selectedUser }),
+        setSelectedUser: (selectedUser) => {
+            set({ selectedUser });
+            if (selectedUser && selectedUser._id !== "ai-bot") {
+                get().markMessagesAsRead(selectedUser._id);
+            }
+        },
     }), { name: "ChatStore" }));

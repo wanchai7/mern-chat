@@ -6,6 +6,7 @@ const MessageSchema = new Schema(
     receiverId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     text: { type: String },
     image: { type: String },
+    isRead: { type: Boolean, default: false },
   },
   {
     timestamps: true,
