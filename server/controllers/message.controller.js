@@ -93,6 +93,11 @@ exports.sendMessage = async (req, res) => {
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
 
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId && receiverSocketId !== senderSocketId) {
+            io.to(senderSocketId).emit("newMessage", newMessage);
+        }
+
         res.status(201).json(newMessage);
     } catch (error) {
         console.error("Error in sendMessage: ", error.message);

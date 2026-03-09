@@ -16,9 +16,12 @@ export const useChatStore = create(
             const socket = useAuthStore.getState().socket;
             if (!socket) return;
             
-            // To ensure we don't have multiple handlers if called multiple times, off it first
-            socket.off("newMessageFromSidebar");
-            // use a specific handler so it doesn't conflict with ChatContainer's newMessage listener
+            // Unsubscribe previous handler if it exists to prevent duplicates
+            const prevHandler = get().sidebarHandlerRef;
+            if (prevHandler) {
+                socket.off("newMessage", prevHandler);
+            }
+            
             const sidebarHandler = (newMessage) => {
                 const state = get();
                 const isFromSelectedUser = state.selectedUser && newMessage.senderId === state.selectedUser._id;
@@ -159,31 +162,64 @@ export const useChatStore = create(
             if (!selectedUser) return;
 
             const socket = useAuthStore.getState().socket;
+            if (!socket) return;
 
-            socket.on("newMessage", (newMessage) => {
+            // Unsubscribe previous handler to prevent double triggering
+            const prevChatHandler = get().chatHandlerRef;
+            if (prevChatHandler) {
+                socket.off("newMessage", prevChatHandler);
+            }
+
+            const chatHandler = (newMessage) => {
+                const { selectedUser } = get();
+                if (!selectedUser) return;
+                
+                // Only push to messages array if it's sent from the selected user.
+                // Our own sent messages are already pushed locally in sendMessage.
                 const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
-                if (!isMessageSentFromSelectedUser) return;
+                
+                if (isMessageSentFromSelectedUser) {
+                    set(state => ({
+                        messages: [...state.messages, newMessage],
+                    }));
+                    get().markMessagesAsRead(selectedUser._id);
+                }
+            };
+            
+            socket.on("newMessage", chatHandler);
+            get().chatHandlerRef = chatHandler;
 
-                set({
-                    messages: [...get().messages, newMessage],
-                });
-                get().markMessagesAsRead(selectedUser._id);
-            });
+            const prevReadHandler = get().readHandlerRef;
+            if (prevReadHandler) {
+                socket.off("messagesRead", prevReadHandler);
+            }
 
-            socket.on("messagesRead", ({ readerId }) => {
+            const readHandler = ({ readerId }) => {
                 const { selectedUser } = get();
                 if (selectedUser && selectedUser._id === readerId) {
                     set((state) => ({
                         messages: state.messages.map(msg => ({ ...msg, isRead: true }))
                     }));
                 }
-            });
+            };
+
+            socket.on("messagesRead", readHandler);
+            get().readHandlerRef = readHandler;
         },
 
         unsubscribeFromMessages: () => {
             const socket = useAuthStore.getState().socket;
-            socket.off("newMessage");
-            socket.off("messagesRead");
+            if (!socket) return;
+            
+            const chatHandler = get().chatHandlerRef;
+            if (chatHandler) {
+                socket.off("newMessage", chatHandler);
+            }
+            
+            const readHandler = get().readHandlerRef;
+            if (readHandler) {
+                socket.off("messagesRead", readHandler);
+            }
         },
 
         setSelectedUser: (selectedUser) => {
