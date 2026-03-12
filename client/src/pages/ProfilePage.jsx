@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User, Edit2 } from "lucide-react";
 import Swal from "sweetalert2";
@@ -6,6 +6,11 @@ import Swal from "sweetalert2";
 const ProfilePage = () => {
     const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
     const [selectedImg, setSelectedImg] = useState(null);
+    const [fullNameInput, setFullNameInput] = useState(authUser?.fullName || "");
+
+    useEffect(() => {
+        setFullNameInput(authUser?.fullName || "");
+    }, [authUser?.fullName]);
 
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
@@ -66,29 +71,17 @@ const ProfilePage = () => {
         }
     };
 
-    const handleEditName = async () => {
-        const { value: newName } = await Swal.fire({
-            title: "แก้ไขชื่อโปรไฟล์",
-            input: "text",
-            inputLabel: "ชื่อ - สกุลใหม่ของคุณ",
-            inputValue: authUser?.fullName || "",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "บันทึก",
-            cancelButtonText: "ยกเลิก",
-            background: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#1d232a" : "#fff",
-            color: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#a6adbb" : "#000",
-            inputValidator: (value) => {
-                if (!value.trim()) {
-                    return "คุณยังไม่ได้ใส่ชื่อ!";
-                }
-            }
-        });
+    const handleNameSubmit = async () => {
+        const newName = fullNameInput.trim();
+        // ถ้าพิมพ์ชื่อว่างเปล่า ให้คืนค่าปุ่มเดิม
+        if (!newName) {
+            setFullNameInput(authUser?.fullName || ""); 
+            return;
+        }
 
-        if (newName && newName.trim() !== authUser.fullName) {
-            // เรียก function updateProfile เพื่อส่งข้อมูลใหม่ไปแก้ไข
-            await updateProfile({ fullName: newName.trim() });
+        // ถ้าชื่อเปลี่ยนไปจากเดิม ก็ให้เซฟลงฐานข้อมูล
+        if (newName !== authUser?.fullName) {
+            await updateProfile({ fullName: newName });
             
             Swal.fire({
                 position: "center",
@@ -152,16 +145,24 @@ const ProfilePage = () => {
                                 <User className="w-4 h-4" />
                                 Full Name
                             </div>
-                            <div className="flex items-center gap-3">
-                                <p className="flex-1 px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
-                                <button 
-                                    onClick={handleEditName}
+                            <div className="flex items-center relative">
+                                <input 
+                                    type="text"
+                                    value={fullNameInput}
+                                    onChange={(e) => setFullNameInput(e.target.value)}
+                                    // พอคลิกข้างนอกหลุดโฟกัสให้เซฟ
+                                    onBlur={handleNameSubmit}
+                                    // พอกด Enter ให้เบลอ เพื่อเด้งไปเข้า onBlur แล้วก็เซฟอัตโนมัติ
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.target.blur(); 
+                                        }
+                                    }}
                                     disabled={isUpdatingProfile}
-                                    className="p-3 bg-base-200 border rounded-lg hover:bg-base-content/10 transition-colors"
-                                    title="Edit Name"
-                                >
-                                    <Edit2 className="w-5 h-5 text-base-content" />
-                                </button>
+                                    className="flex-1 w-full px-4 py-2.5 bg-base-200 rounded-lg border border-transparent hover:border-base-content/20 focus:border-primary focus:bg-base-100 focus:outline-none transition-all cursor-text pr-10"
+                                    title="คลิกเพื่อพิมพ์ชื่อใหม่ และกด Enter เพื่อบันทึก"
+                                />
+                                <Edit2 className="w-4 h-4 text-base-content/30 absolute right-4 pointer-events-none" />
                             </div>
                         </div>
 
