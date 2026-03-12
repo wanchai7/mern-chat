@@ -18,7 +18,7 @@ const HomePage = () => {
                         </div>
 
                         {/* Mobile: แสดง ChatContainer เต็มจอเมื่อเลือก user, Desktop: แสดงตลอด */}
-                        <div className={`${selectedUser ? "w-full" : "hidden"} lg:flex lg:flex-1`}>
+                        <div className={`${selectedUser ? "flex flex-1 w-full" : "hidden"} lg:flex lg:flex-1`}>
                             {!selectedUser ? <NoChatSelected /> : <ChatContainer />}
                         </div>
                     </div>
