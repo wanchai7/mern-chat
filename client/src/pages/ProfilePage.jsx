@@ -1,24 +1,98 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { Camera, Mail, User, Edit2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 const ProfilePage = () => {
     const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
     const [selectedImg, setSelectedImg] = useState(null);
+    const [fullNameInput, setFullNameInput] = useState(authUser?.fullName || "");
+
+    useEffect(() => {
+        setFullNameInput(authUser?.fullName || "");
+    }, [authUser?.fullName]);
 
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
+        // เช็คประเภทไฟล์ต้องเป็น PNG หรือ JPG/JPEG เท่านั้น
+        const validTypes = ["image/png", "image/jpeg", "image/jpg"];
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: "error",
+                title: "ไฟล์ไม่รองรับ",
+                text: "กรุณาอัปโหลดรูปภาพที่เป็นไฟล์ .png, .jpg หรือ .jpeg เท่านั้น",
+                background: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#1d232a" : "#fff",
+                color: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#a6adbb" : "#000"
+            });
+            e.target.value = ""; // รีเซ็ตค่า input กลับ
+            return;
+        }
 
-        reader.readAsDataURL(file);
+        // ถามยืนยันก่อนอัปเดต
+        const result = await Swal.fire({
+            title: "ยืนยันการเปลี่ยนรูปโปรไฟล์?",
+            text: "คุณต้องการใช้รูปนี้เป็นรูปโปรไฟล์ใหม่หรือไม่",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "ใช่, ฉันต้องการเปลี่ยน",
+            cancelButtonText: "ยกเลิก",
+            background: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#1d232a" : "#fff",
+            color: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#a6adbb" : "#000"
+        });
 
-        reader.onload = async () => {
-            const base64Image = reader.result;
-            setSelectedImg(base64Image);
-            await updateProfile({ profilePic: base64Image });
-        };
+        if (result.isConfirmed) {
+            const reader = new FileReader();
+
+            reader.readAsDataURL(file);
+
+            reader.onload = async () => {
+                const base64Image = reader.result;
+                setSelectedImg(base64Image);
+                await updateProfile({ profilePic: base64Image });
+                
+                // แสดง Popup แจ้งเตือนความสำเร็จและตั้งเวลาให้หายไปเอง 2 วินาที (2000 ms)
+                Swal.fire({
+                    position: "center",
+                    icon: "success",
+                    title: "แก้ไขรูปโปรไฟล์สำเร็จ",
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#1d232a" : "#fff",
+                    color: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#a6adbb" : "#000"
+                });
+            };
+        } else {
+            // ถ้ายกเลิก ก็รีเซ็ตค่า input file
+            e.target.value = "";
+        }
+    };
+
+    const handleNameSubmit = async () => {
+        const newName = fullNameInput.trim();
+        // ถ้าพิมพ์ชื่อว่างเปล่า ให้คืนค่าปุ่มเดิม
+        if (!newName) {
+            setFullNameInput(authUser?.fullName || ""); 
+            return;
+        }
+
+        // ถ้าชื่อเปลี่ยนไปจากเดิม ก็ให้เซฟลงฐานข้อมูล
+        if (newName !== authUser?.fullName) {
+            await updateProfile({ fullName: newName });
+            
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "แก้ไขชื่อโปรไฟล์สำเร็จ",
+                showConfirmButton: false,
+                timer: 2000,
+                background: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#1d232a" : "#fff",
+                color: document.documentElement.getAttribute("data-theme") === "dark" || document.body.classList.contains("dark") ? "#a6adbb" : "#000"
+            });
+        }
     };
 
     return (
@@ -54,7 +128,7 @@ const ProfilePage = () => {
                                     type="file"
                                     id="avatar-upload"
                                     className="hidden"
-                                    accept="image/*"
+                                    accept="image/png, image/jpeg, image/jpg"
                                     onChange={handleImageUpload}
                                     disabled={isUpdatingProfile}
                                 />
@@ -71,7 +145,25 @@ const ProfilePage = () => {
                                 <User className="w-4 h-4" />
                                 Full Name
                             </div>
-                            <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
+                            <div className="flex items-center relative">
+                                <input 
+                                    type="text"
+                                    value={fullNameInput}
+                                    onChange={(e) => setFullNameInput(e.target.value)}
+                                    // พอคลิกข้างนอกหลุดโฟกัสให้เซฟ
+                                    onBlur={handleNameSubmit}
+                                    // พอกด Enter ให้เบลอ เพื่อเด้งไปเข้า onBlur แล้วก็เซฟอัตโนมัติ
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.target.blur(); 
+                                        }
+                                    }}
+                                    disabled={isUpdatingProfile}
+                                    className="flex-1 w-full px-4 py-2.5 bg-base-200 rounded-lg border border-transparent hover:border-base-content/20 focus:border-primary focus:bg-base-100 focus:outline-none transition-all cursor-text pr-10"
+                                    title="คลิกเพื่อพิมพ์ชื่อใหม่ และกด Enter เพื่อบันทึก"
+                                />
+                                <Edit2 className="w-4 h-4 text-base-content/30 absolute right-4 pointer-events-none" />
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -79,7 +171,7 @@ const ProfilePage = () => {
                                 <Mail className="w-4 h-4" />
                                 Email Address
                             </div>
-                            <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
+                            <p className="px-4 py-2.5 bg-base-200 rounded-lg border text-base-content/60">{authUser?.email} <span className="text-xs ml-2">(ไม่สามารถแก้ไขได้)</span></p>
                         </div>
                     </div>
 

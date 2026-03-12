@@ -121,7 +121,15 @@ const updateProfile = async (req, res) => {
   try {
     const { fullName, profilePic } = req.body;
 
-    // console.log(profilePic, fullName);
+    // ตรวจสอบรูปแบบไฟล์รูปภาพที่ฝั่ง Server (ป้องกันกรณีถูก bypass มาจากหน้าบ้าน)
+    if (profilePic) {
+      const isPNG = profilePic.startsWith("data:image/png;base64,");
+      const isJPG = profilePic.startsWith("data:image/jpeg;base64,") || profilePic.startsWith("data:image/jpg;base64,");
+      
+      if (!isPNG && !isJPG) {
+        return res.status(400).json({ message: "Invalid image format. Only PNG and JPG are allowed." });
+      }
+    }
 
     const userId = req.user._id;
     if (fullName && profilePic) {
@@ -141,9 +149,9 @@ const updateProfile = async (req, res) => {
         { new: true }
       );
       if (!updatedUser) {
-        res.status(500).json({ message: "Error while update user profile" });
+        return res.status(500).json({ message: "Error while update user profile" });
       }
-      res.status(200).json({ message: "User profile updated successfully" });
+      res.status(200).json(updatedUser);
     } else if (profilePic) {
       //upload pic to cloudinary
       const uploadResponse = await cloudinary.uploader.upload(profilePic);
@@ -160,9 +168,9 @@ const updateProfile = async (req, res) => {
         { new: true }
       );
       if (!updatedUser) {
-        res.status(500).json({ message: "Error while update user profile" });
+        return res.status(500).json({ message: "Error while update user profile" });
       }
-      res.status(200).json({ message: "User profile updated successfully" });
+      res.status(200).json(updatedUser);
     } else if (fullName) {
       const updatedUser = await User.findByIdAndUpdate(
         userId,
@@ -172,9 +180,9 @@ const updateProfile = async (req, res) => {
         { new: true }
       );
       if (!updatedUser) {
-        res.status(500).json({ message: "Error while updating user profile" });
+        return res.status(500).json({ message: "Error while updating user profile" });
       }
-      res.status(200).json({ message: "User profile updated successfully" });
+      res.status(200).json(updatedUser);
     } else {
       res.status(200).json({ message: "Nothing is updated" });
     }
